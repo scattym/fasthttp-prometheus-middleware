@@ -113,13 +113,13 @@ func (p *Prometheus) Use(r *router.Router) {
 // HandlerFunc is onion or wraper to handler for fasthttp listenandserve
 func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		p.reqInProgress.Inc()
 		uri := string(ctx.Request.URI().Path())
 		if uri == p.MetricsPath {
 			// next
 			p.router.Handler(ctx)
 			return
 		}
+		p.reqInProgress.Inc()
 
 		start := time.Now()
 		// next
