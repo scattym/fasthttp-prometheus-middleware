@@ -88,8 +88,9 @@ func (p *Prometheus) registerMetrics(subsystem string) {
 	)
 
 	p.reqInProgress = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "requests_in_progress",
-		Help: "Total HTTP requests currently in progress",
+		Subsystem: subsystem,
+		Name:      "requests_in_progress",
+		Help:      "Total HTTP requests currently in progress",
 	})
 
 	prometheus.Register(p.reqDur)
