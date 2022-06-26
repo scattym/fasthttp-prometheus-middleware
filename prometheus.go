@@ -20,11 +20,12 @@ type ListenerHandler func(c *fasthttp.RequestCtx) string
 // Prometheus contains the metrics gathered by the instance and its path
 type Prometheus struct {
 	reqDur        *prometheus.HistogramVec
+	reqInProgress prometheus.Gauge
 	router        *router.Router
 	listenAddress string
 	MetricsPath   string
 	Handler       fasthttp.RequestHandler
-	groupPath	  bool
+	groupPath     bool
 }
 
 // NewPrometheus generates a new set of metrics with a certain subsystem name
@@ -86,7 +87,13 @@ func (p *Prometheus) registerMetrics(subsystem string) {
 		[]string{"code", "path", "method"},
 	)
 
+	p.reqInProgress = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "requests_in_progress",
+		Help: "Total HTTP requests currently in progress",
+	})
+
 	prometheus.Register(p.reqDur)
+	prometheus.Register(p.reqInProgress)
 }
 
 // Custom adds the middleware to a fasthttp
@@ -106,6 +113,7 @@ func (p *Prometheus) Use(r *router.Router) {
 // HandlerFunc is onion or wraper to handler for fasthttp listenandserve
 func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
+		p.reqInProgress.Inc()
 		uri := string(ctx.Request.URI().Path())
 		if uri == p.MetricsPath {
 			// next
@@ -125,6 +133,7 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 		ep := uri
 		method := string(ctx.Method())
 		p.reqDur.WithLabelValues(status, ep, method).Observe(elapsed)
+		p.reqInProgress.Dec()
 	}
 }
 
