@@ -2,7 +2,6 @@ package fasthttpprom
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -115,6 +114,12 @@ func (p *Prometheus) Use(r *router.Router) {
 // HandlerFunc is onion or wraper to handler for fasthttp listenandserve
 func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
+		defer func() {
+			// recover from panic if one occurred. Set err to nil otherwise.
+			if recover() != nil {
+				p.reqInProgress.Dec()
+			}
+		}()
 		uri := string(ctx.Request.URI().Path())
 		if uri == p.MetricsPath {
 			// next
@@ -137,17 +142,6 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 		p.reqDur.WithLabelValues(status, ep, method).Observe(elapsed)
 		p.reqInProgress.Dec()
 
-		if status == "404" {
-			ep = "404_" + string(ctx.Method())
-		} else {
-			ep = string(ctx.Method()) + "_" + uri
-		}
-		ob, err := p.reqDur.GetMetricWithLabelValues(status, ep)
-		if err != nil {
-			log.Printf("Fail to GetMetricWithLabelValues: %s\n", err)
-			return
-		}
-		ob.Observe(elapsed)
 	}
 }
 
