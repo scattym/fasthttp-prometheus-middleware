@@ -1,4 +1,4 @@
-module github.com/carousell/fasthttp-prometheus-middleware
+module github.com/scattym/fasthttp-prometheus-middleware
 
 go 1.23.0
 
