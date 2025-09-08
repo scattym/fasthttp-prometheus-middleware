@@ -2,6 +2,7 @@ package fasthttpprom
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -82,7 +83,7 @@ func (p *Prometheus) registerMetrics(subsystem string) {
 			Subsystem: subsystem,
 			Name:      "request_duration_seconds",
 			Help:      "request latencies",
-			Buckets:   []float64{.005, .01, .02, 0.04, .06, 0.08, .1, 0.15, .25, 0.4, .6, .8, 1, 1.5, 2, 3, 5},
+			Buckets:   []float64{0.1, 0.2, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 5},
 		},
 		[]string{"code", "path", "method"},
 	)
@@ -121,13 +122,13 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 			return
 		}
 		p.reqInProgress.Inc()
-
 		start := time.Now()
 		// next
 		p.router.Handler(ctx)
 
 		status := strconv.Itoa(ctx.Response.StatusCode())
 		elapsed := float64(time.Since(start)) / float64(time.Second)
+
 		if p.groupPath == true {
 			uri = fmt.Sprintf("%v", ctx.UserValue(router.MatchedRoutePathParam))
 		}
@@ -135,6 +136,18 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 		method := string(ctx.Method())
 		p.reqDur.WithLabelValues(status, ep, method).Observe(elapsed)
 		p.reqInProgress.Dec()
+
+		if status == "404" {
+			ep = "404_" + string(ctx.Method())
+		} else {
+			ep = string(ctx.Method()) + "_" + uri
+		}
+		ob, err := p.reqDur.GetMetricWithLabelValues(status, ep)
+		if err != nil {
+			log.Printf("Fail to GetMetricWithLabelValues: %s\n", err)
+			return
+		}
+		ob.Observe(elapsed)
 	}
 }
 
