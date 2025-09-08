@@ -138,8 +138,8 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 		if p.groupPath == true {
 			uri = fmt.Sprintf("%v", ctx.UserValue(router.MatchedRoutePathParam))
 		}
-		ep := uri
 		method := string(ctx.Method())
+		ep := string(ctx.Method()) + "_" + uri
 		p.reqDur.WithLabelValues(status, ep, method).Observe(elapsed)
 		p.reqInProgress.Dec()
 
