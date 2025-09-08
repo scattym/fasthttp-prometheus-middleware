@@ -116,9 +116,9 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		defer func() {
 			// recover from panic if one occurred. Set err to nil otherwise.
-			if recover() != nil {
+			if r := recover(); r != nil {
 				p.reqInProgress.Dec()
-				panic(recover())
+				panic(r)
 			}
 		}()
 		uri := string(ctx.Request.URI().Path())
