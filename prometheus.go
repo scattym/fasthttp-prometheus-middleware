@@ -139,7 +139,7 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 			uri = fmt.Sprintf("%v", ctx.UserValue(router.MatchedRoutePathParam))
 		}
 		method := string(ctx.Method())
-		ep := string(ctx.Method()) + "_" + uri
+		ep := uri
 		p.reqDur.WithLabelValues(status, ep, method).Observe(elapsed)
 		p.reqInProgress.Dec()
 
