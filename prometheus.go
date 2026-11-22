@@ -1,7 +1,6 @@
 package fasthttpprom
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -38,6 +37,8 @@ func NewPrometheus(subsystem string) *Prometheus {
 	return p
 }
 
+// SetPathGrouping labels metrics with the matched route pattern instead of the raw request path.
+// Enable it on any internet-facing service to avoid unbounded label cardinality.
 func (p *Prometheus) SetPathGrouping(enabled bool) {
 	p.groupPath = enabled
 }
@@ -135,15 +136,31 @@ func (p *Prometheus) HandlerFunc() fasthttp.RequestHandler {
 		status := strconv.Itoa(ctx.Response.StatusCode())
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 
-		if p.groupPath == true {
-			uri = fmt.Sprintf("%v", ctx.UserValue(router.MatchedRoutePathParam))
+		if p.groupPath {
+			// Unmatched requests (404/405, crawlers) share one label to keep cardinality bounded.
+			uri = unmatchedPath
+			if matched, ok := ctx.UserValue(router.MatchedRoutePathParam).(string); ok && matched != "" {
+				uri = matched
+			}
 		}
-		method := string(ctx.Method())
+		method := normaliseMethod(ctx.Method())
 		ep := uri
 		p.reqDur.WithLabelValues(status, ep, method).Observe(elapsed)
 		p.reqInProgress.Dec()
 
 	}
+}
+
+const unmatchedPath = "unmatched"
+
+// normaliseMethod bounds the method label; clients can send arbitrary method tokens.
+func normaliseMethod(m []byte) string {
+	switch string(m) {
+	case fasthttp.MethodGet, fasthttp.MethodHead, fasthttp.MethodPost, fasthttp.MethodPut,
+		fasthttp.MethodPatch, fasthttp.MethodDelete, fasthttp.MethodOptions:
+		return string(m)
+	}
+	return "other"
 }
 
 // since prometheus/client_golang use net/http we need this net/http adapter for fasthttp
