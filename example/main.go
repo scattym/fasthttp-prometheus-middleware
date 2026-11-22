@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	fasthttpprom "github.com/carousell/fasthttp-prometheus-middleware"
 	"github.com/fasthttp/router"
+	fasthttpprom "github.com/scattym/fasthttp-prometheus-middleware"
 	"github.com/valyala/fasthttp"
 )
 
